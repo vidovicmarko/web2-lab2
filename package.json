@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "postinstall": "npm rebuild sqlite3"
   },
   "dependencies": {
     "axios": "^1.7.7",

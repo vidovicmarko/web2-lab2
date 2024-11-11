@@ -14,7 +14,7 @@ app.use(session({ secret: 'secret-key', resave: false, saveUninitialized: true }
 app.use(express.static('public'));
 
 
-const db = new sqlite3.Database('database.db');
+const db = new sqlite3.Database('./database.db');
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS secrets (
