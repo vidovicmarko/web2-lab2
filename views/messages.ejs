@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles_messages.css">
+    <title>Rezultati pretraživanja</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Rezultati pretraživanja</h1>
+        <% if (messages.length > 0) { %>
+            <ul>
+                <% messages.forEach(function(message) { %>
+                    <li><strong>ID:</strong> <%= message.id %> | <strong>Tekst:</strong> <%= message.secret %></li>
+                <% }); %>
+            </ul>
+        <% } else { %>
+            <p>Nema rezultata.</p>
+        <% } %>
+        <a href="/">
+            <button>Nazad na početnu stranicu</button>
+        </a>
+    </div>
+</body>
+</html>

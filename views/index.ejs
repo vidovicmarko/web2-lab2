@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL umetanje i Loša autentifikacija</title>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const timeoutMessage = document.getElementById('timeoutMessage');
+            const captchaContainer = document.getElementById('captchaContainer');
+            const vulnerabilityCheckbox = document.getElementById('vulnerabilityLogin');
+
+            function toggleCaptchaVisibility() {
+                if (vulnerabilityCheckbox.checked) {
+                    captchaContainer.style.display = 'none';
+                    document.getElementById('captcha').required = false;
+                } else {
+                    captchaContainer.style.display = 'block';
+                    document.getElementById('captcha').required = true;
+                }
+            }
+            toggleCaptchaVisibility();
+            vulnerabilityCheckbox.addEventListener('change', toggleCaptchaVisibility);
+
+            const isBlocked = loginForm ? loginForm.getAttribute('data-is-blocked') === 'true' : false;
+            let remainingTime = loginForm ? parseInt(loginForm.getAttribute('data-remaining-time'), 10) : 0;
+
+            if (isBlocked && remainingTime > 0) {
+                loginForm.classList.add('disabled-form');
+                loginForm.querySelectorAll('input, button').forEach(el => el.disabled = true);
+                timeoutMessage.innerText = `Previše neuspješnih pokušaja. Probajte ponovo za ${remainingTime} sekundi.`;
+
+                const interval = setInterval(() => {
+                    remainingTime--;
+                    if (remainingTime > 0) {
+                        timeoutMessage.innerText = `Previše neuspješnih pokušaja. Probajte ponovo za ${remainingTime} sekundi.`;
+                    } else {
+                        clearInterval(interval);
+                        timeoutMessage.innerText = '';
+                        loginForm.classList.remove('disabled-form');
+                        loginForm.querySelectorAll('input, button').forEach(el => el.disabled = false);
+                    }
+                }, 1000);
+            }
+
+            const loginMessage = document.getElementById('loginMessage');
+            if (loginMessage) {
+                loginMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <h1>SQL umetanje (SQL Injection)</h1>
+            <p class="upute">
+                <b>Upute: </b>
+                Primjer SQL umetanja (tautologija)<br>
+                ID je podatak tipa tekst (nije unique, pod isti ID se može više tekstova spremiti) koji predstavlja ime pod kojim se sprema neki tekst (u okviru tekst), PIN je skriven i predstavlja neku lozinku za pojedini ID.<br>
+                Kada se podaci unesu ispisati će ID i tekstove koji su spremljeni pod taj ID.<br>
+                Ako se <b>uključi ranjivost</b>, može se u polja za ID i PIN unijeti tekst : ' OR '1'='1 ,te će on ispisati sve tekstove za sve spremljene ID-eve.<br>
+                <br>Mogu se unositi novi podaci, no već ima 2 unutar baze s kojima se može isprobati pretraživanje.<br>
+                ID: Admin1, PIN:12345<br>
+                ID: Admin2, PIN:54321<br>
+            </p>
+            <h2>Unošenje podataka</h2>
+            <form action="/submit" method="post">
+                <label for="id">ID:</label>
+                <input type="text" id="id" name="id" required>
+                <br>
+                <label for="secret">Tekst:</label>
+                <input type="text" id="secret" name="secret" required>
+                <br>
+                <label for="pin">PIN:</label>
+                <input type="password" id="pin" name="pin" required>
+                <br>
+                <button type="submit">Spremi</button>
+            </form>
+
+            <h2>Pretraživanje podataka</h2>
+            <form action="/messages" method="get">
+                <label for="id">ID:</label>
+                <input type="text" id="id" name="id" required>
+                <br>
+                <label for="pin">PIN:</label>
+                <input type="password" id="pin" name="pin" required>
+                <div style="text-align: center;">
+                    <label for="vulnerability" style="display: inline;">Omogući ranjivost</label>
+                    <input type="checkbox" id="vulnerabilitySearch" name="vulnerability" value="on">
+                </div>
+                <button type="submit">Pretraži</button>
+            </form>
+            <% if (message && !isLoggedIn) { %>
+                <div class="message">
+                    <p><%= message %></p>
+                </div>
+            <% } %>
+        </div>
+
+        <div class="section">
+            <h1>Loša autentifikacija (Broken Authentication)</h1>
+            <% if (isLoggedIn) { %>
+                <p>Prijavljeni kao: <%= username %></p>
+                <form action="/logout" method="post">
+                    <button type="submit">Odjavi se</button>
+                </form>
+            <% } else { %>
+                <p class="upute">
+                    <b>Upute:</b>
+                    Primjer loše autentifikacije<br>
+                    U registraciji se unosi jedinstveno korisničko ime i lozinka koja je skrivena.<br>
+                    Kada je <b>loša autentifikacija isključena</b> tražit će se unos lozinke koja sadrži najmanje jedno veliko slovo, jedan broj i da je dugačka barem 10 znakova, također lozinka se "hashira" prije pohrane u bazu podataka.<br>
+                    U suprotnom kad je <b>loša autentifikacija uključena</b> neće se tražiti ništa od toga niti će se "hashirati" lozinka.<br>
+                    Za prijavu kada je <b>loša autentifikacija isključena</b> traži se ispunjenje CAPTCHA, te nakon 3 kriva pokušaja unosa se blokira unos na 30 sekundi. Također kada se upiše krivo korisničko ime ili lozinka neće se ispisati što je od toga krivo.<br>
+                    Kada je <b>loša autentifikacija isključena</b> rješavanje CAPTCHA nije potrebno, neće biti blokiranja unosa nakon n pokušaja i ispisati će jel korisničko ime ne postoji ili je lozinka kriva.<br>
+                    StrongAdmin se nemoze logirati kada je <b>uključena loša autentifikacija</b>, niti se WeakAdmin moze logirati kada je <b>loša autentifikacija isključena</b> zbog različitih načina pohrane lozinki.<br>
+                    <br>Mogu se kreirati novi korisnici, no u bazi se već nalaze 2 korisnika:<br>
+                    <b>Kreiran bez aktiviranja ranjivosti:</b> Korisničko ime: StrongAdmin, Lozinka: Lozinka12345<br>
+                    <b>Kreiran sa aktiviranjem ranjivosti:</b> Korisničko Ime: WeakAdmin, Lozinka: 12345<br>
+                </p>
+                <h2>Registracija</h2>
+                <form action="/register" method="post">
+                    <label for="username">Korisničko ime:</label>
+                    <input type="text" id="username" name="username" required>
+                    <br>
+                    <label for="password">Lozinka:</label>
+                    <input type="password" id="password" name="password" required>
+                    <div style="text-align: center;">
+                        <label for="vulnerability" style="display: inline;">Omogući lošu autentifikaciju:</label>
+                        <input type="checkbox" id="vulnerabilitySearch" name="vulnerability" value="on">
+                    </div>
+                    <button type="submit">Registriraj se</button>
+                </form>
+                <% if (typeof registerMessage !== 'undefined' && registerMessage) { %>
+                    <div class="message"><p><%= registerMessage %></p></div>
+                <% } %>
+        
+                <h2>Prijava</h2>
+                <form action="/login" method="post" id="loginForm" data-is-blocked="<%= typeof isBlocked !== 'undefined' ? isBlocked : false %>" data-remaining-time="<%= typeof remainingTime !== 'undefined' ? remainingTime : 0 %>">
+                    <label for="username">Korisničko ime:</label>
+                    <input type="text" id="username" name="username" required>
+                    <br>
+                    <label for="password">Lozinka:</label>
+                    <input type="password" id="password" name="password" required>
+                    <br>
+                    <div class="captcha-container" id="captchaContainer">
+                    <label for="captcha">CAPTCHA:</label>
+                    <div style="text-align: center;">
+                    <img src="/captcha" alt="CAPTCHA Image" style="margin-bottom: 5px;">
+                    <input type="text" id="captcha" name="captcha" required>
+                    </div>
+                    </div>
+                    <br>
+                    <label for="vulnerability">Omogući lošu autentifikaciju:</label>
+                    <input type="checkbox" id="vulnerabilityLogin" name="vulnerability" value="on">
+                    <br>
+                    <button type="submit">Prijavi se</button>
+                </form>
+                <% if (typeof loginMessage !== 'undefined' && loginMessage) { %>
+                    <div class="message">
+                        <p id="loginMessage"><%= loginMessage %></p>
+                        <div id="timeoutMessage" style="color: red; font-weight: bold; margin-top: 10px;"></div>
+                    </div>
+                <% } %>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html>
