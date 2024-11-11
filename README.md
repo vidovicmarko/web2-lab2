@@ -1,1 +1,1 @@
-# web2-lab2
+# web2-lab2-projekt
